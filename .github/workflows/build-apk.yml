@@ -24,10 +24,12 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-          cache: 'gradle'
 
       - name: Install npm dependencies
         run: npm ci
+
+      - name: Generate Native Android Code (Expo Prebuild)
+        run: npx expo prebuild -p android --no-install
 
       - name: Make Gradle executable
         run: chmod +x android/gradlew
