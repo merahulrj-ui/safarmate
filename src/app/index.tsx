@@ -236,7 +236,43 @@ export default function HomeScreen() {
             />
           </View>
 
-          <View style={styles.divider} />
+          <View style={{ position: 'relative', zIndex: 11, elevation: 11 }}>
+            <View style={styles.divider} />
+            <TouchableOpacity 
+              style={{
+                position: 'absolute',
+                right: 32,
+                top: -16,
+                backgroundColor: '#FFF',
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: '#E5E7EB',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 4,
+                zIndex: 12
+              }}
+              onPress={() => {
+                const tempFrom = from;
+                const tempFromLat = fromLat;
+                const tempFromLon = fromLon;
+                setFrom(to);
+                setFromLat(toLat);
+                setFromLon(toLon);
+                setTo(tempFrom);
+                setToLat(tempFromLat);
+                setToLon(tempFromLon);
+              }}
+            >
+              <Feather name="repeat" size={14} color="#10B981" style={{ transform: [{ rotate: '90deg' }] }} />
+            </TouchableOpacity>
+          </View>
 
           {/* To */}
           <View style={[styles.inputRow, { zIndex: 9, elevation: 9 }]}>

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, ScrollView, Alert } from 'react-native';
+import * as Location from 'expo-location';
+import { Feather } from '@expo/vector-icons';
 
 interface Location {
   display_name: string;
@@ -86,6 +88,40 @@ export default function LocationAutocomplete({ placeholder, value, onChange, ico
     onChange(shortName, loc.lat, loc.lon);
   };
 
+  const handleCurrentLocation = async () => {
+    setLoading(true);
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission to access location was denied');
+        setLoading(false);
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      const lat = location.coords.latitude.toString();
+      const lon = location.coords.longitude.toString();
+
+      // Reverse geocoding using Photon
+      const res = await fetch(`https://photon.komoot.io/reverse?lon=${lon}&lat=${lat}`);
+      const data = await res.json();
+      
+      let cityName = 'Current Location';
+      if (data.features && data.features.length > 0) {
+        const p = data.features[0].properties;
+        cityName = p.city || p.name || p.state || 'Current Location';
+      }
+
+      hasTyped.current = false;
+      setQuery(cityName);
+      onChange(cityName, lat, lon);
+    } catch (e) {
+      Alert.alert('Error', 'Could not get current location');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleInputChange = (text: string) => {
     hasTyped.current = true;
     setQuery(text);
@@ -106,10 +142,14 @@ export default function LocationAutocomplete({ placeholder, value, onChange, ico
         onFocus={() => { if (results.length > 0) setIsOpen(true); }}
         maxLength={100}
       />
-      {loading && (
+      {loading ? (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="small" color="#10B981" />
         </View>
+      ) : (
+        <TouchableOpacity style={styles.loaderContainer} onPress={handleCurrentLocation}>
+          <Feather name="navigation" size={16} color="#3B82F6" />
+        </TouchableOpacity>
       )}
 
       {isOpen && results.length > 0 && (

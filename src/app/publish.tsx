@@ -154,6 +154,44 @@ export default function PublishScreen() {
                   </View>
                 </View>
 
+                <View style={{ position: 'relative', zIndex: 11, elevation: 11, marginVertical: 16 }}>
+                  <View style={{ height: 1, backgroundColor: '#E5E7EB', marginHorizontal: 16 }} />
+                  <TouchableOpacity 
+                    style={{
+                      position: 'absolute',
+                      right: 16,
+                      top: -16,
+                      backgroundColor: '#FFF',
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: '#E5E7EB',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 4,
+                      zIndex: 12
+                    }}
+                    onPress={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        from: prev.to,
+                        fromLat: prev.toLat,
+                        fromLon: prev.toLon,
+                        to: prev.from,
+                        toLat: prev.fromLat,
+                        toLon: prev.fromLon
+                      }));
+                    }}
+                  >
+                    <Feather name="repeat" size={14} color="#3B82F6" style={{ transform: [{ rotate: '90deg' }] }} />
+                  </TouchableOpacity>
+                </View>
+
                 <View style={[styles.inputGroup, { zIndex: 9, elevation: 9 }]}>
                   <Text style={styles.label}>GOING TO</Text>
                   <View style={styles.autocompleteWrapper}>
