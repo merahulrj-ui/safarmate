@@ -5,11 +5,17 @@
   "build": {
     "preview": {
       "distribution": "internal",
+      "env": {
+        "GRADLE_OPTS": "-Dorg.gradle.jvmargs=\"-Xmx4096m -XX:MaxMetaspaceSize=1024m\""
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "env": {
+        "GRADLE_OPTS": "-Dorg.gradle.jvmargs=\"-Xmx4096m -XX:MaxMetaspaceSize=1024m\""
+      },
       "android": {
         "buildType": "app-bundle"
       }
