@@ -76,22 +76,58 @@ export default function ChatScreen() {
         );
 
         const [snap1, snap2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-        const today = getLocalYMD();
-        
+        const getValidDateIso = (dateStr?: string, timeStr?: string) => {
+          if (!dateStr || !timeStr) return new Date().toISOString();
+          try {
+            let year, month, day;
+            if (dateStr.includes('T') || dateStr.endsWith('Z')) {
+              const tempD = new Date(dateStr);
+              year = tempD.getFullYear();
+              month = tempD.getMonth() + 1;
+              day = tempD.getDate();
+            } else {
+              const parts = dateStr.split('-');
+              if (parts.length !== 3) return new Date().toISOString();
+              year = Number(parts[0]);
+              month = Number(parts[1]);
+              day = Number(parts[2]);
+            }
+            let [hours, minutes] = timeStr.replace(/[^0-9:]/g, '').split(':').map(Number);
+            if (timeStr.toLowerCase().includes('pm') && hours < 12) hours += 12;
+            if (timeStr.toLowerCase().includes('am') && hours === 12) hours = 0;
+            const d = new Date(year, month - 1, day, hours, minutes);
+            if (isNaN(d.getTime())) return new Date().toISOString();
+            return d.toISOString();
+          } catch (e) {
+            return new Date().toISOString();
+          }
+        };
+
+        const now = new Date().getTime();
+        let hasAnyRide = false;
         let hasActiveRide = false;
         
-        snap1.forEach(doc => {
-          if (doc.data().date >= today) hasActiveRide = true;
-        });
-        snap2.forEach(doc => {
-          if (doc.data().date >= today) hasActiveRide = true;
-        });
+        const processDoc = (docSnap: any) => {
+          hasAnyRide = true;
+          const data = docSnap.data();
+          const depIso = getValidDateIso(data.date, data.time);
+          // A ride is active until 2 hours after pickup time
+          const rideEndTime = new Date(depIso).getTime() + (2 * 60 * 60 * 1000);
+          if (rideEndTime >= now) {
+            hasActiveRide = true;
+          }
+        };
 
-        // If no active ride is found, block the chat
-        setIsChatBlocked(!hasActiveRide);
+        snap1.forEach(processDoc);
+        snap2.forEach(processDoc);
 
-        // 2. If blocked, check if current user already rated the other user
-        if (!hasActiveRide) {
+        // Block chat ONLY if they had a ride together, and ALL rides are over.
+        // If they have no rides (pre-booking) or an active ride, don't block.
+        const shouldBlock = hasAnyRide && !hasActiveRide;
+        setIsChatBlocked(shouldBlock);
+
+        // If blocked, check if current user already rated the other user
+        if (shouldBlock) {
           const ratingQ = query(
             collection(db, 'ratings'),
             where('fromUserId', '==', authUser.uid),
@@ -104,6 +140,7 @@ export default function ChatScreen() {
           }
         }
       } catch (error) {
+        console.error("Error checking rides/ratings:", error);
       }
     };
 
@@ -309,7 +346,7 @@ export default function ChatScreen() {
     try {
       const ratingData = {
         fromUserId: authUser.uid,
-        toUserId: otherUserId,
+        toUserId: otherUserId as string,
         rating: rating,
         createdAt: new Date().toISOString()
       };
@@ -318,7 +355,9 @@ export default function ChatScreen() {
       
       setHasRated(true);
       setRatingValue(rating);
-    } catch (e) {
+    } catch (e: any) {
+      console.error(e);
+      showAlert("Error", "Could not submit rating. " + e.message);
     } finally {
       setSubmittingRating(false);
     }

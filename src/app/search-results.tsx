@@ -97,6 +97,11 @@ export default function SearchResultsScreen() {
         const departureIso = getValidDateIso(data.date, data.time);
 
         if (departureIso < todayStart) return;
+        
+        if (date && typeof date === 'string') {
+          const departureDateStr = departureIso.split('T')[0];
+          if (departureDateStr !== date) return;
+        }
 
         if (matchesFrom && matchesTo) {
           const available = data.seatsAvailable !== undefined ? data.seatsAvailable : 3;
