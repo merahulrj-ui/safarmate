@@ -31,20 +31,25 @@ export default function LocationAutocomplete({ placeholder, value, onChange, ico
   }, [value]);
 
   useEffect(() => {
+    let abortController = new AbortController();
+
     const fetchLocations = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`);
+        // Switched from Photon to Nominatim due to Photon server latency issues
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=in`, {
+          signal: abortController.signal,
+          headers: {
+            'User-Agent': 'SafarMate/1.0'
+          }
+        });
         const data = await res.json();
         
-        const mapped = data.features.map((f: any) => {
-          const p = f.properties;
-          const parts = [p.name, p.street, p.city, p.state, p.country].filter(Boolean);
-          const uniqueParts = Array.from(new Set(parts));
+        const mapped = data.map((item: any) => {
           return {
-            display_name: uniqueParts.join(', '),
-            lat: f.geometry.coordinates[1].toString(),
-            lon: f.geometry.coordinates[0].toString()
+            display_name: item.display_name,
+            lat: item.lat,
+            lon: item.lon
           };
         });
 
@@ -52,9 +57,10 @@ export default function LocationAutocomplete({ placeholder, value, onChange, ico
         if (mapped.length > 0 && hasTyped.current) {
           setIsOpen(true);
         }
-      } catch (error) {
+      } catch (error: any) {
+        if (error.name === 'AbortError') return; // Ignore cancelled requests
         // Fallback
-        const CITIES = ['Delhi', 'Mumbai', 'Bangalore', 'Pune', 'Roorkee', 'Dehradun', 'Haridwar', 'Chandigarh'];
+        const CITIES = ['Delhi', 'Mumbai', 'Bangalore', 'Pune', 'Roorkee', 'Dehradun', 'Haridwar', 'Chandigarh', 'Noida', 'Gurgaon', 'Jaipur', 'Lucknow'];
         const matched = CITIES.filter(c => c.toLowerCase().includes(query.toLowerCase()));
         const fallbackData = matched.map(c => ({ display_name: `${c}, India`, lat: '0', lon: '0' }));
         setResults(fallbackData);
@@ -62,7 +68,9 @@ export default function LocationAutocomplete({ placeholder, value, onChange, ico
           setIsOpen(true);
         }
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -73,9 +81,12 @@ export default function LocationAutocomplete({ placeholder, value, onChange, ico
         setResults([]);
         setIsOpen(false);
       }
-    }, 250);
+    }, 400); // Increased debounce to 400ms for performance
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      abortController.abort(); // Cancel pending fetch if user types again
+    };
   }, [query]);
 
   const handleSelect = (loc: Location) => {
@@ -86,40 +97,6 @@ export default function LocationAutocomplete({ placeholder, value, onChange, ico
     setQuery(shortName);
     setIsOpen(false);
     onChange(shortName, loc.lat, loc.lon);
-  };
-
-  const handleCurrentLocation = async () => {
-    setLoading(true);
-    try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission to access location was denied');
-        setLoading(false);
-        return;
-      }
-
-      let location = await Location.getCurrentPositionAsync({});
-      const lat = location.coords.latitude.toString();
-      const lon = location.coords.longitude.toString();
-
-      // Reverse geocoding using Photon
-      const res = await fetch(`https://photon.komoot.io/reverse?lon=${lon}&lat=${lat}`);
-      const data = await res.json();
-      
-      let cityName = 'Current Location';
-      if (data.features && data.features.length > 0) {
-        const p = data.features[0].properties;
-        cityName = p.city || p.name || p.state || 'Current Location';
-      }
-
-      hasTyped.current = false;
-      setQuery(cityName);
-      onChange(cityName, lat, lon);
-    } catch (e) {
-      Alert.alert('Error', 'Could not get current location');
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleInputChange = (text: string) => {
@@ -142,14 +119,10 @@ export default function LocationAutocomplete({ placeholder, value, onChange, ico
         onFocus={() => { if (results.length > 0) setIsOpen(true); }}
         maxLength={100}
       />
-      {loading ? (
+      {loading && (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size="small" color="#10B981" />
         </View>
-      ) : (
-        <TouchableOpacity style={styles.loaderContainer} onPress={handleCurrentLocation}>
-          <Feather name="navigation" size={16} color="#3B82F6" />
-        </TouchableOpacity>
       )}
 
       {isOpen && results.length > 0 && (
@@ -200,9 +173,9 @@ const styles = StyleSheet.create({
   dropdownContainer: {
     position: 'absolute',
     top: '100%',
-    left: -20, // Negative margins to match the parent container padding (20px in index.tsx)
-    right: -20,
-    marginTop: 14, // Space below input (which is the input row padding bottom)
+    left: 0,
+    right: 0,
+    marginTop: 14, // Space below input
     backgroundColor: '#FFF',
     borderRadius: 16,
     borderWidth: 1,

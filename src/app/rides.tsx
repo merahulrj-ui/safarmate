@@ -200,9 +200,9 @@ export default function RidesScreen() {
             <View style={styles.emptyIconWrapper}>
               <Ionicons name="search-outline" size={80} color="#10B981" />
             </View>
-            <Text style={styles.emptyTitle}>Your future travel plans will{'\n'}appear here.</Text>
+            <Text style={styles.emptyTitle}>Your Safar starts here.</Text>
             <Text style={styles.emptySubtitle}>
-              Find the perfect ride from thousands of destinations, or publish to share your travel costs.
+              Ready for your next journey? Find reliable rides across India, or share your empty seats to split costs.
             </Text>
           </View>
         ) : (

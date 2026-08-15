@@ -1,8 +1,9 @@
 import { showAlert } from '@/utils/alert';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Switch, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Switch, KeyboardAvoidingView, Platform, Image, Keyboard, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import { Feather, FontAwesome5 } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BottomTabInset } from '@/constants/theme';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
@@ -73,12 +74,40 @@ export default function PublishScreen() {
     const d = new Date();
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
+
+  const handleGetCurrentLocation = async () => {
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission to access location was denied');
+        return;
+      }
+      let location = await Location.getCurrentPositionAsync({});
+      const lat = location.coords.latitude.toString();
+      const lon = location.coords.longitude.toString();
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`);
+      const data = await res.json();
+      
+      let cityName = 'Current Location';
+      if (data && data.address) {
+        cityName = data.address.city || data.address.town || data.address.state || 'Current Location';
+      }
+      setFormData({ ...formData, from: cityName, fromLat: lat, fromLon: lon });
+    } catch (e) {
+      Alert.alert('Error', 'Could not get current location');
+    }
+  };
+
   if (step === 3) {
     const isPriceValid = formData.price.trim() !== '' && !isNaN(Number(formData.price)) && Number(formData.price) > 0;
     isStepValid = isPriceValid && formData.carModel.trim() !== '';
   }
 
   const nextStep = () => {
+    if (step === 1 && formData.from.toLowerCase().trim() === formData.to.toLowerCase().trim()) {
+      Alert.alert('Invalid Route', 'Origin and destination cannot be the same. Please choose a different destination.');
+      return;
+    }
     if (step < 3) setStep(step + 1);
   };
 
@@ -143,63 +172,61 @@ export default function PublishScreen() {
               <View style={[styles.stepContainer, { zIndex: 99, overflow: 'visible' }]}>
                 <Text style={styles.stepTitle}>Confirm your route</Text>
                 
-                <View style={[styles.inputGroup, { zIndex: 10, elevation: 10 }]}>
-                  <Text style={styles.label}>LEAVING FROM</Text>
-                  <View style={styles.autocompleteWrapper}>
-                    <LocationAutocomplete
-                      placeholder="City, station or precise address"
-                      value={formData.from}
-                      onChange={(val, lat, lon) => setFormData({ ...formData, from: val, fromLat: lat || '', fromLon: lon || '' })}
-                    />
+                <View style={{ flexDirection: 'row', paddingTop: 8 }}>
+                  {/* Left Timeline */}
+                  <View style={{ width: 24, alignItems: 'center', marginRight: 12, marginTop: 16, marginBottom: 24 }}>
+                    <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#10B981', zIndex: 2 }} />
+                    <View style={{ width: 2, flex: 1, backgroundColor: '#E5E7EB', marginVertical: 4, zIndex: 1 }} />
+                    <View style={{ width: 12, height: 12, backgroundColor: '#EF4444', zIndex: 2 }} />
                   </View>
-                </View>
 
-                <View style={{ position: 'relative', zIndex: 11, elevation: 11, marginVertical: 16 }}>
-                  <View style={{ height: 1, backgroundColor: '#E5E7EB', marginHorizontal: 16 }} />
-                  <TouchableOpacity 
-                    style={{
-                      position: 'absolute',
-                      right: 16,
-                      top: -16,
-                      backgroundColor: '#FFF',
-                      width: 32,
-                      height: 32,
-                      borderRadius: 16,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderWidth: 1,
-                      borderColor: '#E5E7EB',
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 4,
-                      elevation: 4,
-                      zIndex: 12
-                    }}
-                    onPress={() => {
-                      setFormData(prev => ({
-                        ...prev,
-                        from: prev.to,
-                        fromLat: prev.toLat,
-                        fromLon: prev.toLon,
-                        to: prev.from,
-                        toLat: prev.fromLat,
-                        toLon: prev.fromLon
-                      }));
-                    }}
-                  >
-                    <Feather name="repeat" size={14} color="#3B82F6" style={{ transform: [{ rotate: '90deg' }] }} />
-                  </TouchableOpacity>
-                </View>
+                  {/* Right Fields (From & To) */}
+                  <View style={{ flex: 1 }}>
+                    <View style={{ zIndex: 40, elevation: 40, paddingBottom: 16 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <Text style={[styles.label, { marginBottom: 0 }]}>From</Text>
+                        <TouchableOpacity onPress={handleGetCurrentLocation}>
+                          <Text style={{ fontSize: 12, color: '#10B981', fontFamily: 'Outfit_600SemiBold' }}>📍 Use Current Location</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <LocationAutocomplete
+                        placeholder="City, station or precise address"
+                        value={formData.from}
+                        onChange={(val, lat, lon) => setFormData({ ...formData, from: val, fromLat: lat || '', fromLon: lon || '' })}
+                      />
+                    </View>
+                    
+                    <View style={{ height: 1, backgroundColor: '#F3F4F6', marginBottom: 16 }} />
 
-                <View style={[styles.inputGroup, { zIndex: 9, elevation: 9 }]}>
-                  <Text style={styles.label}>GOING TO</Text>
-                  <View style={styles.autocompleteWrapper}>
-                    <LocationAutocomplete
-                      placeholder="City, station or precise address"
-                      value={formData.to}
-                      onChange={(val, lat, lon) => setFormData({ ...formData, to: val, toLat: lat || '', toLon: lon || '' })}
-                    />
+                    <View style={{ zIndex: 20, elevation: 20, paddingBottom: 8 }}>
+                      <Text style={[styles.label, { marginBottom: 4 }]}>To</Text>
+                      <LocationAutocomplete
+                        placeholder="City, station or precise address"
+                        value={formData.to}
+                        onChange={(val, lat, lon) => setFormData({ ...formData, to: val, toLat: lat || '', toLon: lon || '' })}
+                      />
+                    </View>
+                  </View>
+
+                  {/* Swap Button (Inline) */}
+                  <View style={{ position: 'absolute', right: 0, top: '50%', marginTop: -20, zIndex: 50, elevation: 50 }}>
+                    <TouchableOpacity 
+                      style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#F9FAFB', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E5E7EB' }}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          from: prev.to,
+                          fromLat: prev.toLat,
+                          fromLon: prev.toLon,
+                          to: prev.from,
+                          toLat: prev.fromLat,
+                          toLon: prev.fromLon
+                        }));
+                      }}
+                    >
+                      <Feather name="repeat" size={18} color="#4B5563" style={{ transform: [{ rotate: '90deg' }] }} />
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -209,29 +236,39 @@ export default function PublishScreen() {
               <View style={[styles.stepContainer, { zIndex: 99, overflow: 'visible' }]}>
                 <Text style={styles.stepTitle}>When are you going?</Text>
                 
-                <View style={[styles.inputGroup, { zIndex: 10 }]}>
-                  <Text style={styles.label}>DATE</Text>
-                  <View style={styles.inputWrapper}>
-                    <DateTimePicker
-                      type="date"
-                      placeholder="dd-mm-yyyy"
-                      value={formData.date}
-                      onChange={(val) => setFormData({ ...formData, date: val })}
-                      min={getLocalYMD()}
-                    />
+                <View style={{ flexDirection: 'row', zIndex: 10, elevation: 10 }}>
+                  {/* Date */}
+                  <View style={{ flex: 1, borderRightWidth: 1, borderRightColor: '#E5E7EB', paddingRight: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                      <Feather name="calendar" size={14} color="#6B7280" style={{ marginRight: 6 }} />
+                      <Text style={[styles.label, { marginBottom: 0 }]}>Date</Text>
+                    </View>
+                    <View style={{ marginTop: 0, marginLeft: -16 }}>
+                      <DateTimePicker
+                        type="date"
+                        placeholder="dd-mm-yyyy"
+                        value={formData.date}
+                        onChange={(val) => setFormData({ ...formData, date: val })}
+                        min={getLocalYMD()}
+                      />
+                    </View>
                   </View>
-                </View>
 
-                <View style={[styles.inputGroup, { zIndex: 9 }]}>
-                  <Text style={styles.label}>TIME</Text>
-                  <View style={styles.inputWrapper}>
-                    <DateTimePicker
-                      type="time"
-                      placeholder="Select travel time"
-                      value={formData.time}
-                      onChange={(val) => setFormData({ ...formData, time: val })}
-                      min={formData.date === getLocalYMD() ? getCurrentHM() : undefined}
-                    />
+                  {/* Time */}
+                  <View style={{ flex: 1, paddingLeft: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                      <Feather name="clock" size={14} color="#6B7280" style={{ marginRight: 6 }} />
+                      <Text style={[styles.label, { marginBottom: 0 }]}>Time</Text>
+                    </View>
+                    <View style={{ marginTop: 0, marginLeft: -16 }}>
+                      <DateTimePicker
+                        type="time"
+                        placeholder="Travel time"
+                        value={formData.time}
+                        onChange={(val) => setFormData({ ...formData, time: val })}
+                        min={formData.date === getLocalYMD() ? getCurrentHM() : undefined}
+                      />
+                    </View>
                   </View>
                 </View>
               </View>
@@ -242,7 +279,7 @@ export default function PublishScreen() {
                   <Text style={styles.stepTitle}>Price and Details</Text>
                   
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>PRICE PER SEAT (₹)</Text>
+                    <Text style={styles.label}>Price per seat (₹)</Text>
                     <View style={styles.inputWrapper}>
                       <Text style={styles.rupeeIcon}>₹</Text>
                       <TextInput
@@ -258,7 +295,7 @@ export default function PublishScreen() {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>YOUR CAR MODEL</Text>
+                    <Text style={styles.label}>Car model</Text>
                     <View style={styles.inputWrapper}>
                       <TextInput
                         style={styles.input}
@@ -272,7 +309,7 @@ export default function PublishScreen() {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>SEATS AVAILABLE</Text>
+                    <Text style={styles.label}>Available seats</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
                       <TouchableOpacity
                         onPress={() => setFormData({ ...formData, seatsAvailable: Math.max(1, formData.seatsAvailable - 1) })}
@@ -351,11 +388,16 @@ export default function PublishScreen() {
                     try {
                       await addDoc(collection(db, 'rides'), {
                         ...formData,
+                        price: Number(formData.price), // Convert string to number for Firestore rules
+                        status: 'PUBLISHED',
                         driverId: authUser.uid,
                         driverName: authUser.displayName,
                         createdAt: new Date().toISOString(),
                       });
-                    } catch (e) {
+                    } catch (e: any) {
+                      console.error("Firebase AddDoc Error: ", e);
+                      showAlert("Error", "Failed to publish ride to server. " + e.message);
+                      return;
                     }
 
                     setStep(1);
@@ -514,11 +556,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'Outfit_700Bold',
     color: '#4B5563',
     marginBottom: 8,
-    letterSpacing: 0.5,
   },
   inputWrapper: {
     backgroundColor: '#F9FAFB',
