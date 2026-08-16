@@ -1,23 +1,23 @@
 {
   "expo": {
-    "name": "SafarMate Go",
-    "slug": "safarmate",
+    "name": "SafarMile",
+    "slug": "safarmile",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "safarmate",
+    "scheme": "safarmile",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "com.safarmate.app",
+      "bundleIdentifier": "com.safarmile.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "SafarMate needs camera access to verify your identity.",
-        "NSPhotoLibraryUsageDescription": "SafarMate needs photo access to upload your profile picture and ID documents.",
-        "NSLocationWhenInUseUsageDescription": "SafarMate needs your location to find rides near you."
+        "NSCameraUsageDescription": "SafarMile needs camera access to verify your identity.",
+        "NSPhotoLibraryUsageDescription": "SafarMile needs photo access to upload your profile picture and ID documents.",
+        "NSLocationWhenInUseUsageDescription": "SafarMile needs your location to find rides near you."
       }
     },
     "android": {
-      "package": "com.safarmate.app",
+      "package": "com.safarmile.app",
       "versionCode": 2,
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
@@ -41,7 +41,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#FFFFFF",
-          "image": "./assets/images/splash-custom.png",
+          "image": "./assets/images/splash-custom.jpg",
           "resizeMode": "cover"
         }
       ],

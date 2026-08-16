@@ -372,6 +372,24 @@ export default function PublishScreen() {
                     if (authUser) {
                       const canProceed = await checkActiveRidesLimit(authUser.uid);
                       if (!canProceed) return;
+                      
+                      // Prevent duplicate rides on the same date
+                      try {
+                        const { getDocs, query, collection, where } = require('firebase/firestore');
+                        const dupQ = query(
+                          collection(db, 'rides'),
+                          where('driverId', '==', authUser.uid),
+                          where('date', '==', formData.date),
+                          where('status', '==', 'PUBLISHED')
+                        );
+                        const dupSnap = await getDocs(dupQ);
+                        if (!dupSnap.empty) {
+                          showAlert("Notification", "You already have an active published ride for this date. You cannot publish multiple rides on the same day.");
+                          return;
+                        }
+                      } catch (e) {
+                        console.error("Duplicate check error: ", e);
+                      }
                     }
 
                     showAlert("Notification", 'Ride Published!');

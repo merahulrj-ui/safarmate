@@ -187,7 +187,7 @@ export default function ChatScreen() {
       snapshot.forEach(doc => {
         const data = doc.data();
         // Hide the old welcome message bubble since we now use the custom UI header
-        if (data.senderId === 'team' && data.content === 'Welcome to SafarMate! Start booking or publishing rides today.') {
+        if (data.senderId === 'team' && data.content === 'Welcome to SafarMile! Start booking or publishing rides today.') {
           return;
         }
         msgs.push({ id: doc.id, ...data });
@@ -317,13 +317,13 @@ export default function ChatScreen() {
         <View style={[styles.messageBubbleContainer, { maxWidth: '85%' }]}>
           <View style={[styles.messageBubble, styles.messageBubbleOther]}>
             <Text style={[styles.messageText, styles.messageTextOther, { fontFamily: 'Outfit_700Bold', marginBottom: 8 }]}>
-              Welcome to SafarMate! 🎉
+              Welcome to SafarMile! 🎉
             </Text>
             <Text style={[styles.messageText, styles.messageTextOther, { marginBottom: 8, lineHeight: 22 }]}>
               Hi {authUser?.displayName || 'User'}, we're thrilled to have you here.
             </Text>
             <Text style={[styles.messageText, styles.messageTextOther, { lineHeight: 22 }]}>
-              SafarMate connects verified drivers with empty seats to passengers travelling the same way.
+              SafarMile connects verified drivers with empty seats to passengers travelling the same way.
             </Text>
             <Text style={[styles.messageText, styles.messageTextOther, { marginTop: 8, color: '#10B981', fontFamily: 'Outfit_600SemiBold' }]}>
               ✓ 100% Ad-Free Experience
@@ -458,27 +458,26 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Custom Header */}
-        <LinearGradient
-          colors={['#10B981', '#059669']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}
-        >
+        <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={() => router.navigate('/inbox')}>
-            <Feather name="chevron-left" size={28} color="#FFF" />
+            <Feather name="chevron-left" size={28} color="#111827" />
           </TouchableOpacity>
           
           <View style={styles.headerProfile}>
-            {avatar && !String(avatar).includes('ui-avatars') ? (
+            {otherUserId === 'team' ? (
+              <View style={[styles.headerAvatar, { backgroundColor: 'transparent', padding: 0 }]}>
+                <Image source={require('../../../assets/images/icon.png')} style={{ width: 40, height: 40, borderRadius: 8, resizeMode: 'contain' }} />
+              </View>
+            ) : avatar && !String(avatar).includes('ui-avatars') ? (
               <Image source={{ uri: avatar as string }} style={styles.headerAvatar} />
             ) : (
               <View style={[styles.headerAvatar, styles.initialsAvatar, { width: 40, height: 40, borderRadius: 20 }]}>
                 <Text style={[styles.initialsText, { fontSize: 16 }]}>{getInitials(name as string)}</Text>
               </View>
             )}
-            <Text style={styles.headerName}>{name}</Text>
+            <Text style={styles.headerName}>{otherUserId === 'team' ? 'SafarMile Team' : name}</Text>
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Message List */}
         <FlatList
@@ -513,7 +512,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 0,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
     ...Platform.select({
       web: {
         shadowColor: '#000',
@@ -552,7 +553,7 @@ const styles = StyleSheet.create({
   headerName: {
     fontSize: 18,
     fontFamily: 'Outfit_700Bold',
-    color: '#FFF',
+    color: '#111827',
     marginLeft: 12,
   },
   messageList: {

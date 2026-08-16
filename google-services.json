@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "396326212205",
+    "project_id": "polar-caldron-338916",
+    "storage_bucket": "polar-caldron-338916.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:396326212205:android:560b3be8df1d53412c6564",
+        "android_client_info": {
+          "package_name": "com.safarmile.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkGp4NsykmpvCNah1nEbHateajdN-cu_s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:396326212205:android:61e5d72429d955e02c6564",
+        "android_client_info": {
+          "package_name": "safarmate.smd"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkGp4NsykmpvCNah1nEbHateajdN-cu_s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

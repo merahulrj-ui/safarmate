@@ -15,9 +15,9 @@ GROUP_URL = 'https://mbasic.facebook.com/groups/YOUR_GROUP_ID/'
 
 # The message you want to post automatically
 PROMO_MESSAGE = (
-    "Hi! If you are travelling today, check out SafarMate. "
-    "It's a 100% Ad-Free carpooling app with Zero Booking Fees. "
-    "Download here: https://safarmate.example.com"
+    "Hi! If you are travelling today, check out SafarMile. "
+    "You can find verified drivers offering empty seats at very low prices. "
+    "Download here: https://safarmile.example.com"
 )
 
 # Keywords to look for in a post to decide if we should comment

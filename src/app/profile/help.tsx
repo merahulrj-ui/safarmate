@@ -12,7 +12,7 @@ const FAQS = [
     icon: 'users',
     questions: [
       { q: "How do I cancel a booking?", a: "You can cancel a booking from the 'Your Rides' tab. Go to History, select your active ride, scroll to the bottom, and tap 'Cancel My Booking'." },
-      { q: "How do payments and refunds work?", a: "SafarMate Go currently connects passengers and drivers. All payments are made directly to the driver (via Cash or UPI) during the ride. We do not charge online cancellation fees or hold refunds." },
+      { q: "How do payments and refunds work?", a: "SafarMile currently connects passengers and drivers. All payments are made directly to the driver (via Cash or UPI) during the ride. We do not charge online cancellation fees or hold refunds." },
       { q: "How much luggage can I bring?", a: "Generally, one medium bag is allowed per passenger. If you have extra or oversized luggage, you must message the driver before booking to confirm." },
     ]
   },
@@ -22,14 +22,14 @@ const FAQS = [
     questions: [
       { q: "How do I edit my ride details?", a: "Currently, if you need to change route or date, it is best to cancel the published ride from 'Your Rides' and publish a new one to avoid passenger confusion." },
       { q: "What if a passenger is a no-show?", a: "Wait for at least 10-15 minutes and try calling them or using the in-app chat. If they are unreachable, you can cancel their booking and proceed." },
-      { q: "When do I receive my payments?", a: "SafarMate Go does not hold your money! You will receive payments directly from your passengers via Cash or UPI during or at the end of the journey." }
+      { q: "When do I receive my payments?", a: "SafarMile does not hold your money! You will receive payments directly from your passengers via Cash or UPI during or at the end of the journey." }
     ]
   },
   {
     category: 'Trust & Safety',
     icon: 'shield',
     questions: [
-      { q: "Why verify my Govt ID?", a: "Verification keeps SafarMate Go secure. Profiles with a green 'Verified' badge get 3x more bookings because they build trust in the community." },
+      { q: "Why verify my Govt ID?", a: "Verification keeps SafarMile secure. Profiles with a green 'Verified' badge get 3x more bookings because they build trust in the community." },
       { q: "How do I report bad behavior?", a: "Safety is our absolute priority. You can report a user directly from their profile page or by contacting our support team." },
       { q: "What is the smoking/music policy?", a: "The driver sets the rules for their car. Always check the ride details or ask the driver politely before playing music or smoking." }
     ]
@@ -46,7 +46,7 @@ export default function HelpScreen() {
   };
 
   const handleContactSupport = () => {
-    Linking.openURL('mailto:support@safarmate.com?subject=SafarMate%20Go%20Support%20Request');
+    Linking.openURL('mailto:support@safarmile.com?subject=SafarMile%20Support%20Request');
   };
 
   return (

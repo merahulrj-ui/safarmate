@@ -40,7 +40,7 @@ export default function LocationAutocomplete({ placeholder, value, onChange, ico
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=in`, {
           signal: abortController.signal,
           headers: {
-            'User-Agent': 'SafarMate/1.0'
+            'User-Agent': 'SafarMile/1.0'
           }
         });
         const data = await res.json();

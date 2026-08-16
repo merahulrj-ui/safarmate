@@ -139,12 +139,15 @@ export default function SearchResultsScreen() {
         <View style={{ alignItems: 'center' }}>
           {/* Header Logo */}
           <View style={styles.logoContainer}>
-            <View style={styles.logoIconBg}>
-              <FontAwesome5 name="map-marker-alt" size={20} color="#FFF" />
+            <View style={[styles.logoIconBg, { backgroundColor: 'transparent', padding: 0 }]}>
+              <Image 
+                source={require('../../assets/images/icon.png')} 
+                style={{ width: 48, height: 48, resizeMode: 'contain' }} 
+              />
             </View>
             <Text style={styles.logoText}>
               <Text style={{ color: '#0A1128' }}>Safar</Text>
-              <Text style={{ color: '#10B981' }}>Mate</Text>
+              <Text style={{ color: '#10B981' }}>Mile</Text>
             </Text>
           </View>
 

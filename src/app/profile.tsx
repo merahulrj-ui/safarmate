@@ -157,7 +157,7 @@ export default function ProfileScreen() {
     
     // No rides ever
     if (total === 0) {
-      return { text: 'New to SafarMate: No rides yet', color: '#4B5563', bgColor: '#F3F4F6', borderColor: '#E5E7EB', icon: 'info' };
+      return { text: 'New to SafarMile: No rides yet', color: '#4B5563', bgColor: '#F3F4F6', borderColor: '#E5E7EB', icon: 'info' };
     }
     
     // Perfect record

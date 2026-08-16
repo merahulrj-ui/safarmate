@@ -39,7 +39,7 @@ export default function LoginScreen({ asComponent = false }: LoginScreenProps) {
         if (securitySnap.exists()) {
           const data = securitySnap.data();
           if (data.blockedUntil && data.blockedUntil > Date.now()) {
-            showAlert("Access Denied", "Your account has been temporarily locked due to too many failed login attempts. Please try again after 24 hours or contact support@safarmate.com.");
+            showAlert("Access Denied", "Your account has been temporarily locked due to too many failed login attempts. Please try again after 24 hours or contact support@safarmile.com.");
             setLoading(false);
             return;
           }
@@ -62,17 +62,20 @@ export default function LoginScreen({ asComponent = false }: LoginScreenProps) {
         });
         
         const newConvRef = await addDoc(collection(db, 'conversations'), {
-          user: { id: 'team', name: 'SafarMate Team', avatar: 'https://ui-avatars.com/api/?name=SafarMate+Team&background=10B981&color=fff' },
+          participants: [userCredential.user.uid, 'team'],
+          users: {
+            [userCredential.user.uid]: { id: userCredential.user.uid, name: name, avatar: null },
+            team: { id: 'team', name: 'SafarMile Team', avatar: 'https://ui-avatars.com/api/?name=SafarMile+Team&background=10B981&color=fff' }
+          },
           unreadCount: 1,
           unreadCounts: {
             [userCredential.user.uid]: 1
           },
           lastMessage: {
             senderId: 'team',
-            content: 'Welcome to SafarMate! Start booking or publishing rides today.',
+            content: 'Welcome to SafarMile! Start booking or publishing rides today.',
             createdAt: new Date().toISOString()
-          },
-          participants: [userCredential.user.uid, 'team']
+          }
         });
         
 
@@ -80,7 +83,9 @@ export default function LoginScreen({ asComponent = false }: LoginScreenProps) {
         showAlert("Notification", 'Account created successfully!');
       }
     } catch (error: any) {
-      if (error.code === 'auth/invalid-credential') {
+      if (error.code === 'auth/too-many-requests') {
+        showAlert("Access Denied", "Your account has been temporarily locked due to too many failed login attempts. Please try again after 24 hours or contact support@safarmile.com.");
+      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
         if (isLogin) {
           const emailLower = email.toLowerCase().trim();
           const securityRef = doc(db, 'login_security', emailLower);
@@ -94,7 +99,7 @@ export default function LoginScreen({ asComponent = false }: LoginScreenProps) {
           if (attempts >= 3) {
             const blockedUntil = Date.now() + 24 * 60 * 60 * 1000;
             await setDoc(securityRef, { failedAttempts: attempts, blockedUntil }, { merge: true });
-            showAlert("Access Denied", "Your account has been temporarily locked due to too many failed login attempts. Please try again after 24 hours or contact support@safarmate.com.");
+            showAlert("Access Denied", "Your account has been temporarily locked due to too many failed login attempts. Please try again after 24 hours or contact support@safarmile.com.");
           } else {
             await setDoc(securityRef, { failedAttempts: attempts }, { merge: true });
             showAlert("Error", `Invalid email or password. You have ${3 - attempts} attempt(s) left.`);
@@ -134,7 +139,7 @@ export default function LoginScreen({ asComponent = false }: LoginScreenProps) {
     <View style={styles.formContainer}>
       <Text style={styles.title}>{isLogin ? 'Welcome back' : 'Create an account'}</Text>
           <Text style={styles.subtitle}>
-            {isLogin ? 'Log in to your SafarMate account.' : 'Sign up for a new SafarMate account.'}
+            {isLogin ? 'Log in to your SafarMile account.' : 'Sign up for a new SafarMile account.'}
           </Text>
 
           <View style={styles.form}>

@@ -136,7 +136,11 @@ export default function InboxScreen() {
                 >
                   
                   <View style={styles.avatarContainer}>
-                    {displayAvatar && !String(displayAvatar).includes('ui-avatars') && !String(displayAvatar).includes('pravatar') ? (
+                    {displayId === 'team' ? (
+                      <View style={[styles.avatar, { backgroundColor: 'transparent', padding: 0 }]}>
+                        <Image source={require('../../assets/images/icon.png')} style={{ width: 60, height: 60, borderRadius: 12, resizeMode: 'contain' }} />
+                      </View>
+                    ) : displayAvatar && !String(displayAvatar).includes('ui-avatars') && !String(displayAvatar).includes('pravatar') ? (
                       <Image source={{ uri: displayAvatar }} style={styles.avatar} />
                     ) : (
                       <View style={[styles.avatar, styles.initialsAvatar]}>
@@ -151,7 +155,7 @@ export default function InboxScreen() {
                   </View>
 
                   <View style={styles.messageContent}>
-                    <Text style={styles.userName} numberOfLines={1}>{displayName}</Text>
+                    <Text style={styles.userName} numberOfLines={1}>{displayId === 'team' ? 'SafarMile Team' : displayName}</Text>
                     <Text 
                       style={[styles.messagePreview, isUnread ? styles.messagePreviewUnread : styles.messagePreviewRead]} 
                       numberOfLines={1}
