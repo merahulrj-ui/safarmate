@@ -110,6 +110,17 @@ export default function ChatScreen() {
         const processDoc = (docSnap: any) => {
           hasAnyRide = true;
           const data = docSnap.data();
+          
+          if (data.status === 'CANCELLED') {
+            return;
+          }
+          
+          const passengerId = data.driverId === authUser.uid ? otherUserId : authUser.uid;
+          const userBooking = data.bookings?.find((b: any) => b.passengerId === passengerId);
+          if (userBooking && (userBooking.status === 'CANCELLED' || userBooking.status === 'REJECTED')) {
+            return;
+          }
+
           const depIso = getValidDateIso(data.date, data.time);
           // A ride is active until 2 hours after pickup time
           const rideEndTime = new Date(depIso).getTime() + (2 * 60 * 60 * 1000);
@@ -378,7 +389,7 @@ export default function ChatScreen() {
       return (
         <View style={[styles.footer, { flexDirection: 'column', alignItems: 'center', paddingVertical: 24, backgroundColor: '#F9FAFB' }]}>
           <Text style={{ color: '#111827', fontSize: 16, fontFamily: 'Outfit_700Bold', marginBottom: 12 }}>
-            {hasRated ? 'You rated this user' : 'Ride ended. Rate this user'}
+            {hasRated ? 'You rated this user' : 'Ride ended or cancelled'}
           </Text>
           <View style={{ flexDirection: 'row', gap: 12 }}>
             {[1, 2, 3, 4, 5].map(star => (
