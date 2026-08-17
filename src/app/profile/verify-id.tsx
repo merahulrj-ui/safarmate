@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import * as ImagePicker from 'expo-image-picker';
+import { sendTelegramNotification } from '@/lib/telegram';
 
 export default function VerifyIdScreen() {
   const router = useRouter();
@@ -68,6 +69,8 @@ export default function VerifyIdScreen() {
         pendingGovtIdBack: docType === 'PAN' ? null : backImage,
         govtIdStatus: 'pending'
       });
+      
+      await sendTelegramNotification(`🛡️ <b>New ID Verification (KYC) Request</b>\n\n<b>User:</b> ${user.displayName || 'A User'}\n<b>ID Type:</b> ${docType}\n<b>User ID:</b> <code>${user.uid}</code>\n\n<i>Open Admin Panel to view images and approve.</i>`);
       
       showAlert("Success", 'ID submitted successfully. Awaiting verification.');
       router.navigate('/profile');

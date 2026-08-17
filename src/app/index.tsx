@@ -246,7 +246,7 @@ export default function HomeScreen() {
         >
           <Image source={{ uri: 'https://flagcdn.com/w40/in.png' }} style={styles.promoIconImg} />
           <Text style={styles.promoText} numberOfLines={1} adjustsFontSizeToFit>
-            <Text style={{ color: '#FF9933' }}>PURELY MADE </Text>
+            <Text style={{ color: '#FF9933' }}>PROUDLY MADE </Text>
             <Text style={{ color: '#FFFFFF' }}>IN INDIA, MADE FOR </Text>
             <Text style={{ color: '#10B981' }}>INDIA</Text>
           </Text>
@@ -257,6 +257,9 @@ export default function HomeScreen() {
           <Feather name="shield" size={14} color="#10B981" style={{ marginRight: 6 }} />
           <Text style={{ fontSize: 12, fontFamily: 'Outfit_700Bold', color: '#059669', letterSpacing: 0.5 }}>PROUDLY AD-FREE</Text>
         </View>
+
+        {/* Main Title */}
+        <Text style={styles.mainTitle}>Find a ride</Text>
 
         {/* Search Card */}
         <View style={[styles.searchCard, { zIndex: 99, elevation: 10 }]}>
@@ -430,7 +433,14 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#F9FAFB',
+  },
+  mainTitle: {
+    fontSize: 32,
+    fontFamily: 'Outfit_700Bold',
+    color: '#111827',
+    marginBottom: 16,
+    paddingHorizontal: 4,
   },
   scrollContainer: {
     paddingHorizontal: 20, // Increased to match screenshot width ratio

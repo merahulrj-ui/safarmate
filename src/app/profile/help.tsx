@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, LayoutAnimation, UIManager, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, LayoutAnimation, UIManager, Platform, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { sendTelegramNotification } from '@/lib/telegram';
+import { useAuth } from '@/contexts/AuthContext';
+import { showAlert } from '@/utils/alert';
 
 // Legacy LayoutAnimation enabler removed (no-op in New Architecture)
 
@@ -40,13 +43,34 @@ export default function HelpScreen() {
   const router = useRouter();
   const [expandedIndex, setExpandedIndex] = useState<string | null>(null);
 
+  const { user } = useAuth();
+  const [supportText, setSupportText] = useState('');
+  const [sending, setSending] = useState(false);
+
   const toggleExpand = (id: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedIndex(expandedIndex === id ? null : id);
   };
 
-  const handleContactSupport = () => {
-    Linking.openURL('mailto:support@safarmile.com?subject=SafarMile%20Support%20Request');
+  const handleSendSupport = async () => {
+    if (!supportText.trim()) {
+      showAlert("Error", "Please enter your question or complaint.");
+      return;
+    }
+    
+    setSending(true);
+    try {
+      const userName = user?.displayName || 'Unknown User';
+      const uid = user?.uid || 'Unknown ID';
+      await sendTelegramNotification(`🆘 <b>New Support Ticket</b>\n\n<b>User:</b> ${userName}\n<b>User ID:</b> <code>${uid}</code>\n\n<b>Message:</b>\n${supportText}`);
+      
+      showAlert("Sent Successfully", "Your message has been sent to our support team. We will contact you soon.");
+      setSupportText('');
+    } catch (e) {
+      showAlert("Error", "Failed to send message. Please try again.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -94,10 +118,25 @@ export default function HelpScreen() {
 
         <View style={styles.contactContainer}>
           <Text style={styles.contactTitle}>Still need help?</Text>
-          <Text style={styles.contactSubtitle}>Our support team is here for you.</Text>
-          <TouchableOpacity style={styles.contactButton} onPress={handleContactSupport}>
-            <Feather name="mail" size={20} color="#FFF" style={{ marginRight: 8 }} />
-            <Text style={styles.contactButtonText}>Email Support</Text>
+          <Text style={styles.contactSubtitle}>Send a message to our support team.</Text>
+          
+          <TextInput
+            style={styles.supportInput}
+            placeholder="Describe your issue or ask a question..."
+            placeholderTextColor="#9CA3AF"
+            multiline
+            numberOfLines={4}
+            value={supportText}
+            onChangeText={setSupportText}
+          />
+          
+          <TouchableOpacity 
+            style={[styles.contactButton, sending && { opacity: 0.7 }]} 
+            onPress={handleSendSupport}
+            disabled={sending}
+          >
+            <Feather name="send" size={20} color="#FFF" style={{ marginRight: 8 }} />
+            <Text style={styles.contactButtonText}>{sending ? "Sending..." : "Send Message"}</Text>
           </TouchableOpacity>
         </View>
 
@@ -224,6 +263,19 @@ const styles = StyleSheet.create({
     fontFamily: 'Outfit_400Regular',
     marginBottom: 24,
     textAlign: 'center',
+  },
+  supportInput: {
+    backgroundColor: '#FFF',
+    width: '100%',
+    borderRadius: 12,
+    padding: 16,
+    paddingTop: 16,
+    color: '#111827',
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 15,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginBottom: 16,
   },
   contactButton: {
     flexDirection: 'row',

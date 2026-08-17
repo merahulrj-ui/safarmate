@@ -3,13 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useCallback, useRef } from 'react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db, auth } from '@/lib/firebase';
-import { PhoneAuthProvider, linkWithCredential } from 'firebase/auth';
-import FirebaseRecaptcha, { FirebaseRecaptchaRef } from '@/components/FirebaseRecaptcha';
-import { useRef } from 'react';
+import { sendTelegramNotification } from '@/lib/telegram';
 
 export default function VerifyPhoneScreen() {
   const router = useRouter();
@@ -22,6 +21,16 @@ export default function VerifyPhoneScreen() {
 
   const recaptchaRef = useRef<FirebaseRecaptchaRef>(null);
 
+  useFocusEffect(
+    useCallback(() => {
+      // Clear state when user comes to this screen (especially if logged in as a different user)
+      setPhoneNumber('');
+      setVerificationId('');
+      setVerificationCode('');
+      setPhoneLoading(false);
+    }, [user?.uid])
+  );
+
   const sendOTP = async () => {
     if (!phoneNumber || phoneNumber.length < 10) {
       showAlert('Error', 'Please enter a valid 10-digit phone number');
@@ -30,34 +39,24 @@ export default function VerifyPhoneScreen() {
     
     setPhoneLoading(true);
     const finalPhone = phoneNumber.startsWith('+91') ? phoneNumber : `+91${phoneNumber}`;
-    recaptchaRef.current?.sendOTP(finalPhone);
-  };
-
-  const confirmOTP = async () => {
-    if (verificationCode.length < 6) {
-      showAlert('Error', 'Please enter 6 digit OTP');
-      return;
-    }
     
-    if (!user || !auth.currentUser) return;
-    
-    setPhoneLoading(true);
     try {
-      const credential = PhoneAuthProvider.credential(verificationId, verificationCode);
-      await linkWithCredential(auth.currentUser, credential);
-
-      const finalPhone = phoneNumber.startsWith('+91') ? phoneNumber : `+91${phoneNumber}`;
+      if (!user) return;
       await updateDoc(doc(db, 'users', user.uid), {
-        phone: finalPhone
+        pendingPhone: finalPhone,
+        phoneVerificationStatus: 'pending'
       });
+
+      // Send Telegram Notification to Admin
+      const userName = user.displayName || user.email || 'A User';
+      const text = `🔔 <b>New Phone Verification Request</b>\n\n<b>Name:</b> ${userName}\n<b>Phone:</b> ${finalPhone}\n<b>User ID:</b> <code>${user.uid}</code>\n\nPlease call this number and verify from the database.`;
       
-      showAlert('Success', 'Phone number verified successfully!');
+      await sendTelegramNotification(text);
+      
+      showAlert('Request Received', 'We will call you shortly to verify your phone number. You will receive a notification once verified.');
       router.navigate('/profile');
     } catch (err: any) {
-      let msg = err.message;
-      if (err.code === 'auth/credential-already-in-use') msg = 'This phone number is already linked to another account.';
-      if (err.code === 'auth/invalid-verification-code') msg = 'Invalid OTP code.';
-      showAlert('Error', msg);
+      showAlert('Error', 'Failed to submit phone number. Please try again later.');
     } finally {
       setPhoneLoading(false);
     }
@@ -73,60 +72,37 @@ export default function VerifyPhoneScreen() {
         <View style={{ width: 44 }} />
       </View>
 
-      <FirebaseRecaptcha 
-        ref={recaptchaRef}
-        onVerificationId={(id) => {
-          setVerificationId(id);
-          setPhoneLoading(false);
-          showAlert('OTP Sent', 'SMS has been sent to your phone.');
-        }}
-        onError={(err) => {
-          setPhoneLoading(false);
-          showAlert('Error', err);
-        }}
-      />
-
       <ScrollView style={{ padding: 20 }}>
-        <TouchableOpacity style={styles.truecallerButton} onPress={() => showAlert('Notice', 'Truecaller 1-Tap Login requires Native Code and will be activated in the final APK.')}>
+        <TouchableOpacity style={styles.truecallerButton} onPress={() => showAlert('Notice', 'Truecaller 1-Tap Login will be available in the final update.')}>
           <Text style={styles.truecallerText}>Verify instantly with Truecaller</Text>
         </TouchableOpacity>
 
-        <Text style={styles.orText}>OR VERIFY VIA SMS</Text>
+        <Text style={styles.orText}>OR REQUEST MANUAL VERIFICATION</Text>
+        
+        <View style={styles.infoBox}>
+          <Feather name="phone-call" size={24} color="#10B981" />
+          <View style={styles.infoTextContainer}>
+            <Text style={styles.infoTitle}>How it works?</Text>
+            <Text style={styles.infoDesc}>Enter your number below. Our team will call you to verify your identity. Once verified, you will receive a notification.</Text>
+          </View>
+        </View>
 
-        {!verificationId ? (
-          <>
-            <Text style={styles.inputLabel}>Enter Phone Number</Text>
-            <View style={styles.phoneInputContainer}>
-              <Text style={styles.countryCode}>+91</Text>
-              <TextInput
-                style={styles.phoneInput}
-                placeholder="Enter 10 digit number"
-                keyboardType="phone-pad"
-                value={phoneNumber}
-                onChangeText={setPhoneNumber}
-                maxLength={10}
-              />
-            </View>
-            <TouchableOpacity style={styles.primaryButton} onPress={sendOTP} disabled={phoneLoading}>
-              {phoneLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryButtonText}>Send OTP via SMS</Text>}
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <Text style={styles.inputLabel}>Enter OTP</Text>
-            <TextInput
-              style={styles.otpInput}
-              placeholder="6-digit OTP"
-              keyboardType="number-pad"
-              value={verificationCode}
-              onChangeText={setVerificationCode}
-              maxLength={6}
-            />
-            <TouchableOpacity style={styles.primaryButton} onPress={confirmOTP} disabled={phoneLoading}>
-              {phoneLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryButtonText}>Verify OTP</Text>}
-            </TouchableOpacity>
-          </>
-        )}
+        <Text style={styles.inputLabel}>Enter Phone Number</Text>
+        <View style={styles.phoneInputContainer}>
+          <Text style={styles.countryCode}>+91</Text>
+          <TextInput 
+            style={styles.phoneInput}
+            keyboardType="phone-pad"
+            placeholder="9876543210"
+            maxLength={10}
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+          />
+        </View>
+
+        <TouchableOpacity style={styles.primaryButton} onPress={sendOTP} disabled={phoneLoading}>
+          {phoneLoading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryButtonText}>Request Verification Call</Text>}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -141,19 +117,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
   backButton: {
-    padding: 8,
-    marginLeft: -8,
+    padding: 4,
   },
   headerTitle: {
+    fontFamily: 'Outfit_600SemiBold',
     fontSize: 18,
-    fontFamily: 'Outfit_700Bold',
     color: '#111827',
+  },
+  infoBox: {
+    flexDirection: 'row',
+    backgroundColor: '#ECFDF5',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 24,
+    alignItems: 'center'
+  },
+  infoTextContainer: {
+    marginLeft: 12,
+    flex: 1
+  },
+  infoTitle: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 14,
+    color: '#065F46',
+    marginBottom: 4
+  },
+  infoDesc: {
+    fontFamily: 'Outfit_400Regular',
+    fontSize: 13,
+    color: '#064E3B',
+    lineHeight: 18
   },
   truecallerButton: {
     backgroundColor: '#0056D2',

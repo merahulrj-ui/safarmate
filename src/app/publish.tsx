@@ -14,7 +14,7 @@ import { checkActiveRidesLimit } from '@/utils/rideLimits';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '@/lib/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
 
 export default function PublishScreen() {
   const router = useRouter();
@@ -23,12 +23,23 @@ export default function PublishScreen() {
   const [showLogin, setShowLogin] = useState(false);
   const [step, setStep] = useState(1);
   const [recentPublished, setRecentPublished] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   
   React.useEffect(() => {
     if (isLoggedIn && showLogin) {
       setShowLogin(false);
     }
-  }, [isLoggedIn, showLogin]);
+    
+    if (!authUser) {
+      setUnreadCount(0);
+      return;
+    }
+    const q = query(collection(db, 'notifications'), where('userId', '==', authUser.uid), where('read', '==', false));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setUnreadCount(snapshot.size);
+    });
+    return () => unsubscribe();
+  }, [isLoggedIn, showLogin, authUser]);
 
   React.useEffect(() => {
     loadRecentPublished();
@@ -138,17 +149,37 @@ export default function PublishScreen() {
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>Create your ride</Text>
-          <View style={styles.progressContainer}>
-            <LinearGradient
-              colors={['#10B981', '#059669']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={[styles.progressBar, { width: `${(step / 3) * 100}%` }]}
-            />
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingHorizontal: 24, paddingTop: 16, width: '100%' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ marginRight: 12, justifyContent: 'center', alignItems: 'center' }}>
+              <Image 
+                source={require('../../assets/images/icon.png')} 
+                style={{ width: 44, height: 44, resizeMode: 'contain' }} 
+              />
+            </View>
+            <Text style={{ fontSize: 28, fontFamily: 'Outfit_700Bold' }}>
+              <Text style={{ color: '#0A1128' }}>Safar</Text>
+              <Text style={{ color: '#10B981' }}>Mile</Text>
+            </Text>
           </View>
-          <Text style={styles.stepText}>STEP {step} OF 3</Text>
+          
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity 
+              onPress={() => {
+              if (!authUser) {
+                showAlert("Notification", 'Please login to view notifications');
+              } else {
+                router.push('/notifications' as any);
+              }
+            }} 
+            style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Feather name="bell" size={22} color="#4B5563" />
+            {unreadCount > 0 && (
+              <View style={{ position: 'absolute', top: 10, right: 12, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' }} />
+            )}
+          </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView 
@@ -165,11 +196,24 @@ export default function PublishScreen() {
           >
             <Image source={{ uri: 'https://flagcdn.com/w40/in.png' }} style={styles.promoIconImg} />
             <Text style={styles.promoText} numberOfLines={1} adjustsFontSizeToFit>
-              <Text style={{ color: '#FF9933' }}>PURELY MADE </Text>
+              <Text style={{ color: '#FF9933' }}>PROUDLY MADE </Text>
               <Text style={{ color: '#FFFFFF' }}>IN INDIA, MADE FOR </Text>
               <Text style={{ color: '#10B981' }}>INDIA</Text>
             </Text>
           </LinearGradient>
+
+          <View style={[styles.header, { paddingHorizontal: 0, paddingTop: 8, paddingBottom: 16 }]}>
+            <Text style={styles.title}>Create your ride</Text>
+            <View style={styles.progressContainer}>
+              <LinearGradient
+                colors={['#10B981', '#059669']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.progressBar, { width: `${(step / 3) * 100}%` }]}
+              />
+            </View>
+            <Text style={styles.stepText}>STEP {step} OF 3</Text>
+          </View>
 
           <View style={styles.card}>
             {step === 1 && (
@@ -416,6 +460,8 @@ export default function PublishScreen() {
                         driverName: authUser.displayName,
                         createdAt: new Date().toISOString(),
                       });
+                      
+                      await sendTelegramNotification(`🚗 <b>New Ride Published</b>\n\n<b>From:</b> ${formData.from}\n<b>To:</b> ${formData.to}\n<b>Date:</b> ${formData.date}\n<b>Price:</b> ₹${formData.price}\n<b>Seats:</b> ${formData.seats}\n\n<b>Driver:</b> ${authUser.displayName}`);
                     } catch (e: any) {
                       console.error("Firebase AddDoc Error: ", e);
                       showAlert("Error", "Failed to publish ride to server. " + e.message);
@@ -517,7 +563,7 @@ export default function PublishScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F7F9FC',
+    backgroundColor: '#F9FAFB',
   },
   header: {
     paddingHorizontal: 24,
@@ -525,11 +571,11 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontFamily: 'Outfit_700Bold',
     color: '#111827',
-    textAlign: 'center',
     marginBottom: 16,
+    paddingHorizontal: 4,
   },
   progressContainer: {
     height: 6,
@@ -549,7 +595,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   scrollContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
+    paddingTop: 0,
+    paddingBottom: 40,
+    flexGrow: 1,
   },
   card: {
     backgroundColor: '#FFF',
@@ -734,6 +783,7 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     alignSelf: 'stretch',
     marginBottom: 16,
+    marginHorizontal: 0,
   },
   promoIconImg: {
     width: 32, 

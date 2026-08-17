@@ -8,6 +8,7 @@ import { BottomTabInset } from '@/constants/theme';
 import { auth, db } from '@/lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, collection, addDoc, getDoc } from 'firebase/firestore';
+import { sendTelegramNotification } from '@/lib/telegram';
 
 interface LoginScreenProps {
   asComponent?: boolean;
@@ -78,8 +79,8 @@ export default function LoginScreen({ asComponent = false }: LoginScreenProps) {
           }
         });
         
+        await sendTelegramNotification(`🎉 <b>New User Registration</b>\n\n<b>Name:</b> ${name}\n<b>Email:</b> ${email}\n<b>ID:</b> <code>${userCredential.user.uid}</code>\n\n<i>A new user has joined SafarMile!</i>`);
 
-        
         showAlert("Notification", 'Account created successfully!');
       }
     } catch (error: any) {

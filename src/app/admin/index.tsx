@@ -8,6 +8,7 @@ import { collection, query, where, getDocs, doc, updateDoc, getDoc, setDoc, addD
 import * as Crypto from 'expo-crypto';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { sendTelegramNotification } from '@/lib/telegram';
 
 type Tab = 'dashboard' | 'verifications' | 'users' | 'rides';
 
@@ -90,11 +91,19 @@ export default function AdminDashboardScreen() {
         recentRidesSnap.forEach(d => rRides.push({ id: d.id, ...d.data() }));
         setRecentRides(rRides);
       } else if (activeTab === 'verifications') {
-        const q = query(collection(db, 'users'), where('govtIdStatus', '==', 'pending'));
-        const snapshot = await getDocs(q);
-        const users: any[] = [];
-        snapshot.forEach(d => users.push({ id: d.id, ...d.data() }));
-        setPendingUsers(users);
+        const idQuery = query(collection(db, 'users'), where('govtIdStatus', '==', 'pending'));
+        const phoneQuery = query(collection(db, 'users'), where('phoneVerificationStatus', '==', 'pending'));
+        
+        const [idSnap, phoneSnap] = await Promise.all([getDocs(idQuery), getDocs(phoneQuery)]);
+        const usersMap = new Map();
+        
+        idSnap.forEach(d => usersMap.set(d.id, { id: d.id, _verificationType: 'ID', ...d.data() }));
+        phoneSnap.forEach(d => {
+          if (!usersMap.has(d.id)) {
+            usersMap.set(d.id, { id: d.id, _verificationType: 'Phone', ...d.data() });
+          }
+        });
+        setPendingUsers(Array.from(usersMap.values()));
       } else if (activeTab === 'users') {
         const snapshot = await getDocs(collection(db, 'users'));
         const users: any[] = [];
@@ -112,18 +121,31 @@ export default function AdminDashboardScreen() {
     }
   };
 
-  const handleDecision = async (userId: string, decision: 'approved' | 'rejected') => {
+  const handleDecision = async (userId: string, decision: 'approved' | 'rejected', type: 'ID' | 'Phone') => {
     setProcessing(true);
     try {
       const isApproved = decision === 'approved';
-      await updateDoc(doc(db, 'users', userId), {
-        govtIdStatus: isApproved ? 'verified' : 'rejected',
-        govtIdVerified: isApproved,
-        pendingGovtIdFront: null,
-        pendingGovtIdBack: null,
-      });
+      const updates: any = {};
+      
+      if (type === 'ID') {
+        updates.govtIdStatus = isApproved ? 'verified' : 'rejected';
+        updates.govtIdVerified = isApproved;
+        updates.pendingGovtIdFront = null;
+        updates.pendingGovtIdBack = null;
+      } else {
+        updates.phoneVerificationStatus = isApproved ? 'verified' : 'rejected';
+        if (isApproved) {
+           const userDoc = await getDoc(doc(db, 'users', userId));
+           updates.phone = userDoc.data()?.pendingPhone || null;
+           updates.pendingPhone = null;
+        } else {
+           updates.pendingPhone = null;
+        }
+      }
 
-      if (!isApproved) {
+      await updateDoc(doc(db, 'users', userId), updates);
+
+      if (!isApproved && type === 'ID') {
         await addDoc(collection(db, 'notifications'), {
           userId: userId,
           type: 'REJECTED_ID',
@@ -140,6 +162,20 @@ export default function AdminDashboardScreen() {
       fetchData();
     } catch (error) {
       showAlert('Error', 'Failed to update user.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleSendDailyReport = async () => {
+    setProcessing(true);
+    try {
+      const report = `📊 <b>Daily Admin Summary</b>\n\n👥 <b>Total Users:</b> ${stats.users}\n🚗 <b>Total Rides:</b> ${stats.rides}\n⏳ <b>Pending Verifications:</b> ${stats.pending}\n✅ <b>Verified Users:</b> ${stats.verified}\n\n<i>Generated manually from Admin Panel.</i>`;
+      
+      await sendTelegramNotification(report);
+      showAlert('Report Sent', 'Daily summary report has been sent to Telegram.');
+    } catch (error) {
+      showAlert('Error', 'Failed to send report.');
     } finally {
       setProcessing(false);
     }
@@ -172,9 +208,20 @@ export default function AdminDashboardScreen() {
         contentContainerStyle={[styles.contentContainer, { maxWidth: 800, alignSelf: 'center', width: '100%' }]} 
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ marginBottom: 24 }}>
-          <Text style={{ fontSize: 24, fontFamily: 'Outfit_700Bold', color: '#111827' }}>Dashboard</Text>
-          <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 4, fontFamily: 'Outfit_400Regular' }}>Welcome back, Admin 👋</Text>
+        <View style={{ marginBottom: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View>
+            <Text style={{ fontSize: 24, fontFamily: 'Outfit_700Bold', color: '#111827' }}>Dashboard</Text>
+            <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 4, fontFamily: 'Outfit_400Regular' }}>Welcome back, Admin 👋</Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', backgroundColor: '#10B981', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
+            onPress={handleSendDailyReport}
+            disabled={processing}
+          >
+            <Feather name="send" size={16} color="#FFF" style={{ marginRight: 8 }} />
+            <Text style={{ color: '#FFF', fontFamily: 'Outfit_600SemiBold' }}>Send Report</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', marginBottom: 32 }}>
@@ -283,43 +330,53 @@ export default function AdminDashboardScreen() {
             <Text style={styles.docTypeBadge}>{selectedVerification.govtIdType || 'Unknown ID Type'}</Text>
           </View>
 
-          <Text style={styles.sectionTitle}>Front Side</Text>
-          {selectedVerification.pendingGovtIdFront ? (
-            <Image source={{ uri: selectedVerification.pendingGovtIdFront }} style={styles.idImage} />
-          ) : (
-            <Text style={styles.noImageText}>No front image uploaded.</Text>
-          )}
+            {selectedVerification._verificationType === 'Phone' ? (
+              <View style={{ marginBottom: 24 }}>
+                <Text style={styles.sectionTitle}>Requested Phone Number</Text>
+                <Text style={{ fontSize: 24, fontFamily: 'Outfit_700Bold', color: '#111827', marginTop: 8 }}>{selectedVerification.pendingPhone}</Text>
+                <Text style={{ fontSize: 14, color: '#6B7280', marginTop: 8 }}>Verify that you have called this number before approving.</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.sectionTitle}>Front Side</Text>
+                {selectedVerification.pendingGovtIdFront ? (
+                  <Image source={{ uri: selectedVerification.pendingGovtIdFront }} style={styles.idImage} />
+                ) : (
+                  <Text style={styles.noImageText}>No front image uploaded.</Text>
+                )}
 
-          {selectedVerification.govtIdType !== 'PAN' && (
-            <>
-              <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Back Side</Text>
-              {selectedVerification.pendingGovtIdBack ? (
-                <Image source={{ uri: selectedVerification.pendingGovtIdBack }} style={styles.idImage} />
-              ) : (
-                <Text style={styles.noImageText}>No back image uploaded.</Text>
-              )}
-            </>
-          )}
+                {selectedVerification.govtIdType !== 'PAN' && (
+                  <>
+                    <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Back Side</Text>
+                    {selectedVerification.pendingGovtIdBack ? (
+                      <Image source={{ uri: selectedVerification.pendingGovtIdBack }} style={styles.idImage} />
+                    ) : (
+                      <Text style={styles.noImageText}>No back image uploaded.</Text>
+                    )}
+                  </>
+                )}
+              </>
+            )}
 
-          <View style={styles.actionRow}>
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.rejectButton]}
-              onPress={() => handleDecision(selectedVerification.id, 'rejected')}
-              disabled={processing}
-            >
-              <Feather name="x" size={20} color="#DC2626" />
-              <Text style={styles.rejectButtonText}>Reject</Text>
-            </TouchableOpacity>
+            <View style={styles.actionRow}>
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.rejectButton]}
+                onPress={() => handleDecision(selectedVerification.id, 'rejected', selectedVerification._verificationType)}
+                disabled={processing}
+              >
+                <Feather name="x" size={20} color="#DC2626" />
+                <Text style={styles.rejectButtonText}>Reject</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.actionButton, styles.approveButton]}
-              onPress={() => handleDecision(selectedVerification.id, 'approved')}
-              disabled={processing}
-            >
-              <Feather name="check" size={20} color="#FFF" />
-              <Text style={styles.approveButtonText}>Approve</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.approveButton]}
+                onPress={() => handleDecision(selectedVerification.id, 'approved', selectedVerification._verificationType)}
+                disabled={processing}
+              >
+                <Feather name="check" size={20} color="#FFF" />
+                <Text style={styles.approveButtonText}>Approve</Text>
+              </TouchableOpacity>
+            </View>
         </ScrollView>
       );
     }
@@ -342,10 +399,10 @@ export default function AdminDashboardScreen() {
         {pendingUsers.map(u => (
           <TouchableOpacity key={u.id} style={styles.listItem} onPress={() => setSelectedVerification(u)}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Feather name="shield" size={24} color="#F59E0B" style={{ marginRight: 12 }} />
+              <Feather name={u._verificationType === 'Phone' ? "phone-call" : "shield"} size={24} color="#F59E0B" style={{ marginRight: 12 }} />
               <View>
                 <Text style={styles.listName}>{u.name || u.firstName || 'Unknown User'}</Text>
-                <Text style={styles.listSub}>{u.govtIdType || 'ID'} • Pending</Text>
+                <Text style={styles.listSub}>{u._verificationType === 'Phone' ? `Phone: ${u.pendingPhone}` : u.govtIdType || 'ID'} • Pending</Text>
               </View>
             </View>
             <Feather name="chevron-right" size={20} color="#9CA3AF" />

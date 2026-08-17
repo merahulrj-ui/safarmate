@@ -401,7 +401,15 @@ export default function ProfileScreen() {
                 }
               }
             })}
-            {renderTrustBadge('smartphone', 'Phone', user.phone ? 'verified' : 'unverified', () => router.push('/profile/verify-phone'))}
+            {renderTrustBadge('smartphone', 'Phone', userData?.phone ? 'verified' : (userData?.pendingPhone ? 'pending' : 'unverified'), () => {
+              if (userData?.phone) {
+                showAlert('Verified', 'Your phone number is already verified.');
+              } else if (userData?.pendingPhone) {
+                showAlert('Verification Pending', 'We have received your phone number. Our team will call you shortly to verify it.');
+              } else {
+                router.push('/profile/verify-phone');
+              }
+            })}
           </View>
           
           <View style={{ marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>

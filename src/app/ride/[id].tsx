@@ -9,6 +9,8 @@ import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { checkActiveRidesLimit } from '@/utils/rideLimits';
 import LoginScreen from '@/components/LoginScreen';
+import { format } from 'date-fns';
+import { sendTelegramNotification } from '@/lib/telegram';
 
 export default function RideDetailsScreen() {
   const { id, source, requestedSeats } = useLocalSearchParams();
@@ -134,6 +136,8 @@ export default function RideDetailsScreen() {
       } catch (e) {
       }
       
+      await sendTelegramNotification(`🎫 <b>New Seat Booking Request</b>\n\n<b>Passenger:</b> ${authUser.displayName || 'Passenger'}\n<b>Ride:</b> ${ride.from} → ${ride.to}\n<b>Seats Requested:</b> ${seatsToBook}\n<b>Amount:</b> ₹${ride.price * seatsToBook}\n\n<i>Waiting for driver approval.</i>`);
+
       showAlert("Notification", `Booking confirmed! ₹${ride.price * seatsToBook} paid securely via UPI.`);
       router.replace('/rides');
     } catch (e) {
