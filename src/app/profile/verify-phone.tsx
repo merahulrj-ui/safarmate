@@ -6,7 +6,10 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
+import { PhoneAuthProvider, linkWithCredential } from 'firebase/auth';
+import FirebaseRecaptcha, { FirebaseRecaptchaRef } from '@/components/FirebaseRecaptcha';
+import { useRef } from 'react';
 
 export default function VerifyPhoneScreen() {
   const router = useRouter();
@@ -17,19 +20,17 @@ export default function VerifyPhoneScreen() {
   const [verificationCode, setVerificationCode] = useState('');
   const [phoneLoading, setPhoneLoading] = useState(false);
 
+  const recaptchaRef = useRef<FirebaseRecaptchaRef>(null);
+
   const sendOTP = async () => {
     if (!phoneNumber || phoneNumber.length < 10) {
       showAlert('Error', 'Please enter a valid 10-digit phone number');
       return;
     }
     
-    // MOCK OTP FOR TESTING
     setPhoneLoading(true);
-    setTimeout(() => {
-      setVerificationId('mock_verification_id_12345');
-      setPhoneLoading(false);
-      showAlert('OTP Sent', 'This is a test mode. Any 6-digit code will work as OTP.');
-    }, 1500);
+    const finalPhone = phoneNumber.startsWith('+91') ? phoneNumber : `+91${phoneNumber}`;
+    recaptchaRef.current?.sendOTP(finalPhone);
   };
 
   const confirmOTP = async () => {
@@ -38,25 +39,28 @@ export default function VerifyPhoneScreen() {
       return;
     }
     
-    if (!user) return;
+    if (!user || !auth.currentUser) return;
     
-    // MOCK VERIFICATION FOR TESTING
     setPhoneLoading(true);
-    setTimeout(async () => {
-      try {
-        const finalPhone = phoneNumber.startsWith('+91') ? phoneNumber : `+91${phoneNumber}`;
-        await updateDoc(doc(db, 'users', user.uid), {
-          phone: finalPhone
-        });
-        
-        showAlert('Success', 'Phone number verified successfully!');
-        router.navigate('/profile');
-      } catch (err: any) {
-        showAlert('Error', err.message);
-      } finally {
-        setPhoneLoading(false);
-      }
-    }, 1500);
+    try {
+      const credential = PhoneAuthProvider.credential(verificationId, verificationCode);
+      await linkWithCredential(auth.currentUser, credential);
+
+      const finalPhone = phoneNumber.startsWith('+91') ? phoneNumber : `+91${phoneNumber}`;
+      await updateDoc(doc(db, 'users', user.uid), {
+        phone: finalPhone
+      });
+      
+      showAlert('Success', 'Phone number verified successfully!');
+      router.navigate('/profile');
+    } catch (err: any) {
+      let msg = err.message;
+      if (err.code === 'auth/credential-already-in-use') msg = 'This phone number is already linked to another account.';
+      if (err.code === 'auth/invalid-verification-code') msg = 'Invalid OTP code.';
+      showAlert('Error', msg);
+    } finally {
+      setPhoneLoading(false);
+    }
   };
 
   return (
@@ -68,6 +72,19 @@ export default function VerifyPhoneScreen() {
         <Text style={styles.headerTitle}>Verify Phone</Text>
         <View style={{ width: 44 }} />
       </View>
+
+      <FirebaseRecaptcha 
+        ref={recaptchaRef}
+        onVerificationId={(id) => {
+          setVerificationId(id);
+          setPhoneLoading(false);
+          showAlert('OTP Sent', 'SMS has been sent to your phone.');
+        }}
+        onError={(err) => {
+          setPhoneLoading(false);
+          showAlert('Error', err);
+        }}
+      />
 
       <ScrollView style={{ padding: 20 }}>
         <TouchableOpacity style={styles.truecallerButton} onPress={() => showAlert('Notice', 'Truecaller 1-Tap Login requires Native Code and will be activated in the final APK.')}>

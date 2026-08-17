@@ -77,7 +77,11 @@ export default function HomeScreen() {
       let location = await Location.getCurrentPositionAsync({});
       const lat = location.coords.latitude.toString();
       const lon = location.coords.longitude.toString();
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`, {
+        headers: {
+          'User-Agent': 'SafarMile/1.0'
+        }
+      });
       const data = await res.json();
       
       let cityName = 'Current Location';
@@ -202,10 +206,10 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingHorizontal: 4, width: '100%' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={[styles.logoIconBg, { backgroundColor: 'transparent', padding: 0 }]}>
+            <View style={{ marginRight: 12, justifyContent: 'center', alignItems: 'center' }}>
               <Image 
                 source={require('../../assets/images/icon.png')} 
-                style={{ width: 48, height: 48, resizeMode: 'contain' }} 
+                style={{ width: 44, height: 44, resizeMode: 'contain' }} 
               />
             </View>
             <Text style={styles.logoText}>

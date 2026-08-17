@@ -6,7 +6,7 @@ import { getStorage } from 'firebase/storage';
 import * as SecureStore from 'expo-secure-store';
 
 // TODO: Replace these with your actual Firebase project config keys
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyBkAHqFC4eEzRHtcW0rj4h2gXw5sLGOe3k",
   authDomain: "polar-caldron-338916.firebaseapp.com",
   projectId: "polar-caldron-338916",

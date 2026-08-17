@@ -85,7 +85,11 @@ export default function PublishScreen() {
       let location = await Location.getCurrentPositionAsync({});
       const lat = location.coords.latitude.toString();
       const lon = location.coords.longitude.toString();
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`, {
+        headers: {
+          'User-Agent': 'SafarMile/1.0'
+        }
+      });
       const data = await res.json();
       
       let cityName = 'Current Location';
@@ -288,8 +292,8 @@ export default function PublishScreen() {
                         placeholderTextColor="#9CA3AF"
                         keyboardType="numeric"
                         value={formData.price}
-                        onChangeText={(text) => setFormData({ ...formData, price: text })}
-                        maxLength={10}
+                        onChangeText={(text) => setFormData({ ...formData, price: text.replace(/[^0-9]/g, '') })}
+                        maxLength={4}
                       />
                     </View>
                   </View>

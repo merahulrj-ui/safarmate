@@ -1,10 +1,15 @@
 {
   "expo": {
     "name": "SafarMile",
-    "slug": "safarmile",
+    "slug": "safarmate",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F9FAFB"
+    },
     "scheme": "safarmile",
     "userInterfaceStyle": "automatic",
     "ios": {
@@ -40,9 +45,9 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FFFFFF",
-          "image": "./assets/images/splash-custom.jpg",
-          "resizeMode": "cover"
+          "backgroundColor": "#F9FAFB",
+          "image": "./assets/images/icon.png",
+          "resizeMode": "contain"
         }
       ],
       "@react-native-community/datetimepicker",
